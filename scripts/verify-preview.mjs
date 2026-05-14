@@ -19,65 +19,31 @@ for (const [name, viewport] of cases) {
     fullPage: true,
   })
 
-  await page.locator('[aria-label="Interactive 3D architectural massing model"]').scrollIntoViewIfNeeded()
-  await page.waitForTimeout(800)
+  await page.locator('#partner').scrollIntoViewIfNeeded()
+  await page.waitForTimeout(500)
 
-  const canvasCheck = await page.evaluate(() => {
-    const canvas = document.querySelector('canvas')
-
-    if (!(canvas instanceof HTMLCanvasElement)) {
-      return { ok: false, reason: 'missing canvas' }
-    }
-
-    const gl =
-      canvas.getContext('webgl2', { preserveDrawingBuffer: true }) ??
-      canvas.getContext('webgl', { preserveDrawingBuffer: true })
-
-    if (!gl) {
-      return { ok: false, reason: 'missing webgl context' }
-    }
-
-    const samples = []
-    const points = [
-      [0.25, 0.25],
-      [0.5, 0.5],
-      [0.75, 0.75],
-      [0.35, 0.65],
-      [0.65, 0.35],
-    ]
-
-    for (const [x, y] of points) {
-      const pixel = new Uint8Array(4)
-      gl.readPixels(
-        Math.floor(canvas.width * x),
-        Math.floor(canvas.height * y),
-        1,
-        1,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        pixel,
-      )
-      samples.push([...pixel])
-    }
-
-    const unique = new Set(samples.map((sample) => sample.join(','))).size
-    const visible = samples.some(([r, g, b, a]) => a > 0 && r + g + b > 30)
+  const pageCheck = await page.evaluate(() => {
+    const hero = document.querySelector('video')
+    const images = [...document.querySelectorAll('img')]
+    const horizontalOverflow = document.documentElement.scrollWidth > window.innerWidth + 1
 
     return {
-      ok: visible && unique > 1 && canvas.width > 0 && canvas.height > 0,
-      canvas: { width: canvas.width, height: canvas.height },
-      samples,
-      unique,
-      visible,
+      ok:
+        hero instanceof HTMLVideoElement &&
+        images.length >= 5 &&
+        !horizontalOverflow,
+      heroPresent: hero instanceof HTMLVideoElement,
+      imageCount: images.length,
+      horizontalOverflow,
     }
   })
 
-  if (!canvasCheck.ok) {
-    throw new Error(`${name} canvas check failed: ${JSON.stringify(canvasCheck)}`)
+  if (!pageCheck.ok) {
+    throw new Error(`${name} page check failed: ${JSON.stringify(pageCheck)}`)
   }
 
   await page.close()
 }
 
 await browser.close()
-console.log('Preview screenshots and WebGL canvas checks passed.')
+console.log('Preview screenshots and responsive page checks passed.')
